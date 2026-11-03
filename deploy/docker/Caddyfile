@@ -1,0 +1,31 @@
+# Single public entry point.
+#   SITE_ADDRESS=":80"                     -> plain HTTP (default)
+#   SITE_ADDRESS="1-2-3-4.sslip.io"        -> automatic Let's Encrypt HTTPS (needs ports 80+443 open)
+{
+	admin off
+}
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# uploads are capped at 100 MB by the backend (multer)
+	request_body {
+		max_size 110MB
+	}
+
+	handle /api/* {
+		reverse_proxy backend:4000
+	}
+
+	# Socket.IO (live job progress). Caddy proxies WebSocket upgrades automatically.
+	handle /socket.io/* {
+		reverse_proxy backend:4000
+	}
+
+	# React single-page app
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-slate-700;
+  }
+  body {
+    @apply bg-slate-900 text-slate-100 font-sans antialiased;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-800;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-600 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-slate-800 border border-slate-700 rounded-xl p-5;
+  }
+  .btn-primary {
+    @apply bg-sky-500 hover:bg-sky-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-slate-700 hover:bg-slate-600 text-slate-100 font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors;
+  }
+  .input {
+    @apply bg-slate-700 border border-slate-600 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent placeholder-slate-400;
+  }
+  .badge-critical {
+    @apply bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+  .badge-high {
+    @apply bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+  .badge-medium {
+    @apply bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+  .badge-low {
+    @apply bg-green-500/20 text-green-400 border border-green-500/30 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/60 transition-all text-sm font-medium;
+  }
+  .sidebar-link.active {
+    @apply text-sky-400 bg-sky-500/10 border border-sky-500/20;
+  }
+}
+
+/* Cytoscape graph container */
+.cy-container {
+  width: 100%;
+  height: 100%;
+  background: #0f172a;
+  border-radius: 12px;
+}
+
+/* Animated gradient for hero */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+.shimmer-text {
+  background: linear-gradient(90deg, #38bdf8, #818cf8, #38bdf8);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Risk score ring */
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.risk-ring {
+  transition: stroke-dasharray 1s ease;
+}
+
+/* ═════════ Visualization design tokens (additive) ═════════ */
+@layer components {
+  .card-glass {
+    @apply rounded-2xl border border-slate-700/60 p-5 shadow-lg shadow-black/20;
+    background: linear-gradient(
+      145deg,
+      rgba(30, 41, 59, 0.85),
+      rgba(15, 23, 42, 0.85)
+    );
+    backdrop-filter: blur(6px);
+  }
+  .section-title {
+    @apply text-sm font-semibold text-white tracking-tight;
+  }
+  .section-sub {
+    @apply text-xs text-slate-400 mt-0.5;
+  }
+  .eyebrow {
+    @apply text-[10px] font-semibold uppercase tracking-wider text-slate-500;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border;
+  }
+  .skeleton {
+    @apply rounded-lg bg-slate-700/40 animate-pulse;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes growX {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.fade-up {
+  animation: fadeUp 0.35s ease-out both;
+}
+.grow-right {
+  transform-origin: left center;
+  animation: growX 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.grow-left {
+  transform-origin: right center;
+  animation: growX 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}

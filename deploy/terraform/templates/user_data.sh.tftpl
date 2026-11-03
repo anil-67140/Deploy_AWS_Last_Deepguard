@@ -1,0 +1,156 @@
+#!/bin/bash
+# ───────────────────────────────────────────────────────────────────────────────────────────────
+# DeepGuard first-boot script (rendered by Terraform: modules/compute/main.tf -> templatefile).
+# Follow progress:  tail -f /var/log/deepguard-bootstrap.log
+# NOTE: no secrets live in this file. Secrets are read from SSM Parameter Store with the VM's IAM role.
+# ───────────────────────────────────────────────────────────────────────────────────────────────
+set -Eeuo pipefail
+exec > >(tee -a /var/log/deepguard-bootstrap.log) 2>&1
+trap 'echo "!! bootstrap FAILED near line $LINENO (see log above)"' ERR
+echo "== DeepGuard bootstrap started: $(date -u +%FT%TZ)"
+
+REGION="${region}"
+BUCKET="${bucket}"
+BUNDLE_KEY="${bundle_key}"
+SSM_PATH="${ssm_path}"
+REPO_URL="${repo_url}"
+REPO_BRANCH="${repo_branch}"
+EIP="${eip}"
+APP_DIR=/opt/deepguard/app
+DATA_DIR=/opt/deepguard/data
+
+# remembered for the helper scripts installed below
+cat > /etc/deepguard.conf <<CONF
+REGION=$REGION
+BUCKET=$BUCKET
+BUNDLE_KEY=$BUNDLE_KEY
+REPO_BRANCH=$REPO_BRANCH
+APP_DIR=$APP_DIR
+DATA_DIR=$DATA_DIR
+CONF
+
+# ── 0. wait for the Elastic IP to be attached (avoids a network cut-over in the middle of a download) ──
+TOKEN=$(curl -sS -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 600" || true)
+for i in $(seq 1 60); do
+  CUR=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4 || true)
+  [ "$CUR" = "$EIP" ] && { echo "Elastic IP attached ($EIP)"; break; }
+  sleep 5
+done
+sleep 5
+
+# ── 1. swap (a small VM + Docker builds + PyTorch needs a safety net) ──
+if [ ! -f /swapfile ]; then
+  fallocate -l ${swap_mb}M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=${swap_mb} status=none
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+sysctl -w vm.swappiness=20
+echo 'vm.swappiness=20' > /etc/sysctl.d/99-deepguard.conf
+
+# ── 2. Docker + Compose + Buildx ──
+dnf install -y docker git jq unzip
+systemctl enable --now docker
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL "https://github.com/docker/compose/releases/download/v${compose_version}/docker-compose-linux-x86_64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+curl -fsSL "https://github.com/docker/buildx/releases/download/v${buildx_version}/buildx-v${buildx_version}.linux-amd64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-buildx
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose /usr/local/lib/docker/cli-plugins/docker-buildx
+docker compose version
+
+# ── 3. application source + the Docker bundle that Terraform uploaded to S3 ──
+mkdir -p /opt/deepguard "$DATA_DIR/backups" "$DATA_DIR/uploads" "$DATA_DIR/reports"
+if [ ! -d "$APP_DIR/.git" ]; then
+  git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$APP_DIR"
+fi
+mkdir -p "$APP_DIR/deploy/docker"
+aws s3 cp "s3://$BUCKET/$BUNDLE_KEY" /tmp/docker-bundle.zip --region "$REGION" --only-show-errors
+unzip -oq /tmp/docker-bundle.zip -d "$APP_DIR/deploy/docker"
+cp "$APP_DIR/deploy/docker/dockerignore" "$APP_DIR/.dockerignore"
+
+# ── 4. .env  (plain settings from Terraform + secrets from SSM) ──
+ENV_FILE="$APP_DIR/deploy/docker/.env"
+cat > "$ENV_FILE" <<'ENVEOF'
+%{ for k, v in plain_env ~}
+${k}='${v}'
+%{ endfor ~}
+ENVEOF
+aws ssm get-parameters-by-path --path "$SSM_PATH" --with-decryption --region "$REGION" \
+  --query 'Parameters[].[Name,Value]' --output json \
+  | jq -r --arg q "'" '.[] | "\(.[0] | split("/") | last)=\($q)\(.[1])\($q)"' >> "$ENV_FILE"
+chmod 600 "$ENV_FILE"
+echo ".env written with $(wc -l < "$ENV_FILE") entries (values not logged)"
+
+# ── 5. bring back earlier DeepGuard backups, if a previous VM left any in S3 (restore them from Admin -> Backups) ──
+aws s3 sync "s3://$BUCKET/backups/" "$DATA_DIR/backups/" --region "$REGION" --only-show-errors || true
+chown -R 1000:1000 "$DATA_DIR/backups" "$DATA_DIR/uploads" "$DATA_DIR/reports"   # uid 1000 = "node" user in the backend image
+
+# ── 6. helper scripts + 15-minute backup sync to S3 ──
+cat > /usr/local/bin/deepguard-backup-sync <<'EOS'
+#!/bin/bash
+source /etc/deepguard.conf
+aws s3 sync "$DATA_DIR/backups/" "s3://$BUCKET/backups/" --region "$REGION" --exclude "*.tmp" --only-show-errors
+EOS
+
+cat > /usr/local/bin/deepguard-redeploy <<'EOS'
+#!/bin/bash
+# Pull the latest code + the latest Docker bundle from S3 and rebuild. Existing .env and data are kept.
+set -Eeuo pipefail
+source /etc/deepguard.conf
+cd "$APP_DIR"
+git fetch --depth 1 origin "$REPO_BRANCH"
+git reset --hard FETCH_HEAD
+aws s3 cp "s3://$BUCKET/$BUNDLE_KEY" /tmp/docker-bundle.zip --region "$REGION" --only-show-errors
+unzip -oq /tmp/docker-bundle.zip -d "$APP_DIR/deploy/docker"
+cp "$APP_DIR/deploy/docker/dockerignore" "$APP_DIR/.dockerignore"
+cd "$APP_DIR/deploy/docker"
+for s in ai-engine backend web; do docker compose build "$s"; done   # one at a time: small VM
+docker compose up -d --remove-orphans
+docker image prune -f
+docker compose ps
+EOS
+chmod +x /usr/local/bin/deepguard-backup-sync /usr/local/bin/deepguard-redeploy
+
+cat > /etc/systemd/system/deepguard-backup-sync.service <<'UNIT'
+[Unit]
+Description=Sync DeepGuard backups to S3
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/deepguard-backup-sync
+UNIT
+
+cat > /etc/systemd/system/deepguard-backup-sync.timer <<'UNIT'
+[Unit]
+Description=Sync DeepGuard backups to S3 every 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now deepguard-backup-sync.timer
+
+# ── 7. build + start (images are built ONE AT A TIME so a 2 GB VM never runs three builds at once) ──
+cd "$APP_DIR/deploy/docker"
+for s in ai-engine backend web; do
+  echo "== building $s ($(date -u +%T))"
+  docker compose build "$s"
+done
+docker compose up -d
+docker image prune -f
+
+# ── 8. wait until the API reports healthy ──
+for i in $(seq 1 60); do
+  STATE=$(docker inspect --format '{{.State.Health.Status}}' deepguard-backend-1 2>/dev/null || echo starting)
+  [ "$STATE" = "healthy" ] && break
+  sleep 10
+done
+docker compose ps
+touch /opt/deepguard/.bootstrap-done
+echo "== DeepGuard bootstrap finished: $(date -u +%FT%TZ)  ->  ${plain_env["SITE_URL"]}"

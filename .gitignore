@@ -1,0 +1,57 @@
+# ── Environment files (secrets) ──
+.env
+*/.env
+**/.env
+
+# ── Large dataset (download from Kaggle — see README) ──
+HI-Small_Trans.csv
+**/HI-Small_Trans.csv
+*.csv.zip
+
+# ── Runtime state written by the AI Engine (admin threshold/weights, FR-14) ──
+ai-engine/saved_models/engine_config.json
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.ipynb_checkpoints/
+
+# ── Node (backend-node & frontend) ──
+node_modules/
+dist/
+build/
+.vite/
+*.log
+npm-debug.log*
+
+# ── Runtime-generated content (kept empty via .gitkeep) ──
+backend-node/uploads/*
+!backend-node/uploads/.gitkeep
+backend-node/reports/*
+!backend-node/reports/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# ── OS / editor cruft ──
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# docker
+
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+terraform.tfvars
+*.auto.tfvars
+*.zip
+
+# docker
+.env
+data/

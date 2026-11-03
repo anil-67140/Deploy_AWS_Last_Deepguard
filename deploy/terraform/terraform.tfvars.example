@@ -1,0 +1,19 @@
+# cp terraform.tfvars.example terraform.tfvars   (terraform.tfvars is git-ignored — it holds secrets)
+
+aws_region    = "ap-south-1"
+instance_type = "t3.small" # t3.micro also works for light demos; see README
+
+# Your e-mail: SNS alarms + budget alerts + DeepGuard fraud alerts (via SES)
+alert_email = "you@example.com"
+
+# Supabase (Project Settings -> API)
+supabase_url         = "https://YOUR_PROJECT.supabase.co"
+supabase_anon_key    = "eyJ...anon..."
+supabase_service_key = "eyJ...service_role..."
+
+# Optional
+# groq_api_key         = "gsk_..."
+# ses_extra_recipients = ["teammate@example.com"]   # SES sandbox: every receiving address must be verified
+# allowed_cidrs        = ["203.0.113.7/32"]         # restrict the site to your own IP
+# enable_https         = true                       # https://<ip>.sslip.io via Lets Encrypt
+# monthly_budget_usd   = 10

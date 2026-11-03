@@ -1,0 +1,127 @@
+# DeepGuard — production stack for a single small VM.
+#
+#   web (Caddy + React build) --> backend (Node) --> ai-engine (FastAPI)
+#                                         \--------> mongo
+#
+# Only `web` publishes ports (80/443). mongo, backend and ai-engine are reachable only on the private compose network.
+# Run from this folder:   docker compose up -d --build        (reads ./.env — see .env.example)
+
+name: deepguard
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25", "--bind_ip_all"]   # 0.25 GB is MongoDB's minimum cache
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    mem_limit: ${MONGO_MEM:-512m}
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ping:1}).ok"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    logging: *default-logging
+
+  ai-engine:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/ai-engine.Dockerfile
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: info
+      ENGINE_CORS_ORIGINS: ${SITE_URL:-http://localhost}
+      CONTEXT_ROWS: ${CONTEXT_ROWS:-100000}
+      MAX_BATCH: ${MAX_BATCH:-50000}
+    volumes:
+      - ai_state:/data/engine
+    mem_limit: ${AI_MEM:-1000m}
+    logging: *default-logging
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/backend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+      ai-engine:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      NODE_HEAP_MB: ${NODE_HEAP_MB:-384}
+      MONGODB_URI: mongodb://root:${MONGO_ROOT_PASSWORD}@mongo:27017/deepguard?authSource=admin
+      AI_ENGINE_URL: http://ai-engine:8000
+      FRONTEND_URL: ${SITE_URL:-http://localhost}
+      APP_URL: ${SITE_URL:-http://localhost}
+      SUPABASE_URL: ${SUPABASE_URL:?set SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:?set SUPABASE_SERVICE_KEY}
+      REPORT_SIGNING_KEY: ${REPORT_SIGNING_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.1-8b-instant}
+      # e-mail alerts (Amazon SES SMTP in the cloud; dry-run locally)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_DRY_RUN: ${SMTP_DRY_RUN:-true}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
+      ALERT_EMAIL_MODE: ${ALERT_EMAIL_MODE:-all}
+      # sizing (set per instance type by Terraform)
+      BATCH_SIZE: ${BATCH_SIZE:-20000}
+      QUEUE_CONCURRENCY: ${QUEUE_CONCURRENCY:-1}
+      BACKUP_DIR: /app/backups
+      BACKUP_RETENTION_DAYS: "30"
+      BACKUP_CRON: "0 2 * * *"
+    volumes:
+      - ${DATA_DIR:-./data}/backups:/app/backups
+      - ${DATA_DIR:-./data}/uploads:/app/uploads
+      - ${DATA_DIR:-./data}/reports:/app/reports
+    mem_limit: ${BACKEND_MEM:-640m}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 6s
+      retries: 5
+      start_period: 40s
+    logging: *default-logging
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/frontend.Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:?set SUPABASE_ANON_KEY}
+        VITE_API_URL: /api
+        VITE_SOCKET_URL: ${SITE_URL:-http://localhost}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+    mem_limit: 128m
+    logging: *default-logging
+
+volumes:
+  mongo_data:
+  ai_state:
+  caddy_data:

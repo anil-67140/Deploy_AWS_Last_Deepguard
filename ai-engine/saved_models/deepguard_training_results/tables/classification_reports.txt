@@ -1,0 +1,75 @@
+===== Isolation Forest alone   (threshold 0.4753) =====
+              precision    recall  f1-score   support
+
+      Normal     0.9992    0.5543    0.7130   1013872
+       Fraud     0.0030    0.7501    0.0059      1797
+
+    accuracy                         0.5546   1015669
+   macro avg     0.5011    0.6522    0.3595   1015669
+weighted avg     0.9974    0.5546    0.7118   1015669
+
+
+===== Autoencoder alone   (threshold 0.5133) =====
+              precision    recall  f1-score   support
+
+      Normal     0.9986    0.9863    0.9924   1013872
+       Fraud     0.0263    0.2087    0.0466      1797
+
+    accuracy                         0.9849   1015669
+   macro avg     0.5124    0.5975    0.5195   1015669
+weighted avg     0.9969    0.9849    0.9907   1015669
+
+
+===== Unsupervised AE+IF   (threshold 2.0163) =====
+              precision    recall  f1-score   support
+
+      Normal     0.9992    0.7791    0.8755   1013872
+       Fraud     0.0053    0.6628    0.0105      1797
+
+    accuracy                         0.7789   1015669
+   macro avg     0.5023    0.7209    0.4430   1015669
+weighted avg     0.9975    0.7789    0.8740   1015669
+
+
+===== XGBoost (base)   (threshold 0.5914) =====
+              precision    recall  f1-score   support
+
+      Normal     0.9993    0.9999    0.9996   1013872
+       Fraud     0.8950    0.6216    0.7337      1797
+
+    accuracy                         0.9992   1015669
+   macro avg     0.9472    0.8107    0.8666   1015669
+weighted avg     0.9991    0.9992    0.9991   1015669
+
+
+===== XGBoost + AE   (threshold 0.4811) =====
+              precision    recall  f1-score   support
+
+      Normal     0.9994    0.9998    0.9996   1013872
+       Fraud     0.8649    0.6411    0.7363      1797
+
+    accuracy                         0.9992   1015669
+   macro avg     0.9321    0.8204    0.8680   1015669
+weighted avg     0.9991    0.9992    0.9991   1015669
+
+
+===== XGBoost + IF   (threshold 0.5603) =====
+              precision    recall  f1-score   support
+
+      Normal     0.9994    0.9998    0.9996   1013872
+       Fraud     0.8694    0.6372    0.7354      1797
+
+    accuracy                         0.9992   1015669
+   macro avg     0.9344    0.8185    0.8675   1015669
+weighted avg     0.9991    0.9992    0.9991   1015669
+
+
+===== XGBoost + AE + IF   (threshold 0.4288) =====
+              precision    recall  f1-score   support
+
+      Normal     0.9994    0.9998    0.9996   1013872
+       Fraud     0.8439    0.6500    0.7344      1797
+
+    accuracy                         0.9992   1015669
+   macro avg     0.9217    0.8249    0.8670   1015669
+weighted avg     0.9991    0.9992    0.9991   1015669

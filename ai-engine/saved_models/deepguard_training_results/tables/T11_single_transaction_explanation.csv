@@ -1,0 +1,13 @@
+feature,value,shap
+Payment_Format_enc,0.0,4.027254
+AE_err,0.5456229,2.7846541
+S_dt_prev,0.0,2.7232442
+R_uniq_send,8.0,1.6351993
+Pair_n,0.0,0.6708934
+S_same_amt,0.0,0.5617869
+Log_Amount_Recv,9.4448395,0.55252737
+Log_Amount_Paid,9.4448395,0.4706421
+AE_z7,9.840512,0.36664176
+AE_z1,8.860172,0.29966265
+S_same_hour,1.0,0.2952559
+AE_z4,10.472072,0.26527515

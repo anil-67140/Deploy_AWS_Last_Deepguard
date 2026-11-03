@@ -1,0 +1,50 @@
+{
+  "split": "time-based 60/20/20",
+  "graphs": "train-period / train+val / all edges",
+  "headline_model": "Blend (XGBoost + GNN + behavioural features)",
+  "best_gnn": "GNN + behavioural features",
+  "blend_weight_xgb": 0.7000000000000001,
+  "hidden": 48,
+  "layers": 3,
+  "steps": 250,
+  "reload_test_max_diff": 3.5762786865234375e-07,
+  "test_metrics": {
+    "XGBoost (reference)": {
+      "Accuracy": 0.999201511516055,
+      "Precision": 0.8950320512820513,
+      "Recall": 0.6215915414579856,
+      "F1": 0.7336617405582923,
+      "ROC_AUC": 0.9920553605152815,
+      "AP_PR_AUC": 0.7406320333578761,
+      "MCC": 0.7455280817314148
+    },
+    "GNN (edge features only)": {
+      "Accuracy": 0.9985664621052724,
+      "Precision": 0.6580166821130676,
+      "Recall": 0.39510294936004453,
+      "F1": 0.4937413073713491,
+      "ROC_AUC": 0.9702140496350157,
+      "AP_PR_AUC": 0.4629878332693642,
+      "MCC": 0.5092366196631979
+    },
+    "GNN + behavioural features": {
+      "Accuracy": 0.998975059788179,
+      "Precision": 0.7423076923076923,
+      "Recall": 0.6444073455759599,
+      "F1": 0.6899016979445934,
+      "ROC_AUC": 0.9929698651030765,
+      "AP_PR_AUC": 0.6876270217760754,
+      "MCC": 0.6911211234285238
+    },
+    "Blend (XGBoost + GNN + behavioural features)": {
+      "Accuracy": 0.999210372670624,
+      "Precision": 0.9034874290348743,
+      "Recall": 0.6199220923761826,
+      "F1": 0.7353135313531353,
+      "ROC_AUC": 0.9932003102708806,
+      "AP_PR_AUC": 0.7489335769010462,
+      "MCC": 0.7480430943699937
+    }
+  },
+  "note": "GNN scores a batch using the whole period graph (structure only, never labels); XGBoost features are strictly past-only. GNN is an optional network-analysis module."
+}

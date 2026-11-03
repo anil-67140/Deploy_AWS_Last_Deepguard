@@ -1,0 +1,19 @@
+# DeepGuard AI Engine — versions match the environment the models were trained / pickled in
+# (Python 3.10+ required: xgboost 3.x). Pin matters: the Isolation Forest pickle is from scikit-learn 1.6.1 and
+# xgboost_final.json was written by xgboost 3.4.1.
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic==2.7.1
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.6.1
+xgboost==3.4.1
+joblib==1.4.2
+python-multipart==0.0.9
+python-dotenv==1.0.1
+httpx==0.27.0
+
+# PyTorch (CPU is enough) — runs the Autoencoder and the optional GNN. NO torch_geometric and NO tensorflow needed any more.
+#   Linux/macOS:  pip install torch
+#   Windows:      pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
