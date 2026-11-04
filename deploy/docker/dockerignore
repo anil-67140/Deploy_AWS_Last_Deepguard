@@ -1,8 +1,11 @@
 # Allow-list build context: everything is excluded EXCEPT what the three images need.
-# (Bootstrap copies this file to <repo>/.dockerignore. For a local build:  cp deploy/docker/dockerignore .dockerignore)
-**
+
+# (Bootstrap copies this file to <repo>/.dockerignore. For a local build: cp deploy/docker/dockerignore .dockerignore)
+
+\*\*
 
 # ── ai-engine: code + ONLY the model files the engine actually reads ──
+
 !ai-engine/requirements.txt
 !ai-engine/main.py
 !ai-engine/features.py
@@ -24,11 +27,13 @@
 !ai-engine/saved_models/deepguard_gnn_results/models/gnn_best.pt
 
 # ── backend-node ──
+
 !backend-node/package.json
 !backend-node/package-lock.json
 !backend-node/src
 
 # ── frontend (built to static files, served by Caddy) ──
+
 !frontend/package.json
 !frontend/package-lock.json
 !frontend/index.html
@@ -36,3 +41,4 @@
 !frontend/tailwind.config.js
 !frontend/postcss.config.js
 !frontend/src
+!deploy/docker/Caddyfile

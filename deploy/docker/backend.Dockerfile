@@ -1,6 +1,6 @@
 # DeepGuard Node.js API gateway (Express + Socket.IO + Mongoose + Puppeteer for PDF reports)
 # Build context = repository root.
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
 # System Chromium for Puppeteer PDF reports (don't let npm download its own copy).
 RUN apt-get update \
